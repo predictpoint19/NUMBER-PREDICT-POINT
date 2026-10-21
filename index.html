@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Number - 3 Results</title>
+  <style>
+    :root{
+      --accent:#ffcc00;
+      --bg-start:#1a0033;
+      --bg-end:#000;
+    }
+    body{
+      margin:0;
+      font-family:Poppins, sans-serif;
+      background: radial-gradient(circle at top, var(--bg-start), var(--bg-end));
+      color:#fff;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      padding:10px;
+    }
+
+    .card{
+      width:95%;
+      max-width:420px;
+      background: rgba(20,20,20,0.9);
+      backdrop-filter: blur(6px);
+      border-radius:12px;
+      padding:12px;
+      margin:8px 0;
+      text-align:center;
+      box-shadow: 0 0 12px rgba(255,0,255,0.12);
+    }
+
+    .logo{ width:84px; height:84px; border-radius:50%; object-fit:cover; margin:8px auto; display:block;}
+    .title{ color:var(--accent); font-weight:700; font-size:20px; text-shadow:0 0 6px var(--accent); }
+    .mr-text{ color:#fff; margin-top:6px; font-size:14px; }
+
+    .subtitle{ font-size:14px; opacity:0.9; margin-bottom:6px; }
+
+    .circle-container{
+      display:grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap:8px;
+      justify-items:center;
+      margin:10px 0;
+    }
+    .circle{
+      width:44px; height:44px; border-radius:50%;
+      background: rgba(60,60,60,0.45);
+      border:1.6px solid #ff00ff;
+      display:flex; align-items:center; justify-content:center;
+      font-size:12px; color:#ddd; overflow:hidden;
+      box-shadow:0 0 8px rgba(255,0,255,0.08);
+    }
+    .circle img{ width:100%; height:100%; display:block; }
+
+    .grid{ display:grid; grid-template-columns: repeat(5,1fr); gap:10px; margin-top:8px; justify-items:center; }
+    .grid img{
+      width:52px; height:52px; border-radius:50%; cursor:pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 0 8px rgba(0,255,255,0.18);
+      display:block;
+    }
+    .grid img.clicked{ transform: scale(1.2); }
+
+    .btn{ width:100%; padding:12px; border-radius:10px; border:0; font-weight:700; cursor:pointer; margin-top:8px; }
+    .btn-yellow{ background: linear-gradient(45deg,#ffcc00,#ff9900); color:#000; box-shadow:0 0 12px rgba(255,200,0,0.5); }
+    .btn-dark{ background:#222; color:#fff; border:1px solid #555; }
+
+    .popup {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 1200;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+    }
+    .popup .popup-content{
+      background: #111;
+      padding: 18px;
+      border-radius: 12px;
+      max-width: 92%;
+      text-align: center;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    }
+
+    .result-images{ display:flex; gap:12px; justify-content:center; margin-bottom:8px; }
+    .result-images img{ width:64px; height:64px; border-radius:50%; box-shadow: 0 0 12px rgba(0,255,255,0.5); }
+
+    .popup .error { color: #ff6666; font-weight:700; font-size:15px; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <img src="logo.png" class="logo" alt="logo">
+    <div class="title">NUMBER PREDICT POINT</div>
+    <div class="mr-text">WinGo 1 Minute / 3 Minute / 5 Minute</div>
+  </div>
+
+  <div class="card">
+    <div class="subtitle">Enter last 10 results (10th → 1st)</div>
+    <div id="inputCircles" class="circle-container">
+      <div class="circle">10th</div><div class="circle">9th</div><div class="circle">8th</div><div class="circle">7th</div><div class="circle">6th</div>
+      <div class="circle">5th</div><div class="circle">4th</div><div class="circle">3rd</div><div class="circle">2nd</div><div class="circle">1st</div>
+    </div>
+    <button class="btn btn-dark" id="backBtn">← Back</button>
+  </div>
+
+  <div class="card">
+    <div id="numberGrid" class="grid"></div>
+  </div>
+
+  <div class="card">
+    <button class="btn btn-yellow" id="startBtn">Start</button>
+  </div>
+
+  <div class="card">
+    <button class="btn btn-yellow" id="howToUseBtn">HOW TO USE</button>
+  </div>
+
+  <div id="resultPopup" class="popup">
+    <div class="popup-content">
+      <div class="result-images" id="resultImages"></div>
+      <div id="popupMessage" class="subtitle"></div>
+    </div>
+  </div>
+
+<script>
+const inputCircles = document.getElementById('inputCircles').children;
+const numberGrid = document.getElementById('numberGrid');
+const resultPopup = document.getElementById('resultPopup');
+const resultImages = document.getElementById('resultImages');
+const popupMessage = document.getElementById('popupMessage');
+const backBtn = document.getElementById('backBtn');
+const startBtn = document.getElementById('startBtn');
+const howToUseBtn = document.getElementById('howToUseBtn');
+
+let userInput = [];
+const labels = ["10th","9th","8th","7th","6th","5th","4th","3rd","2nd","1st"];
+
+let howToUseClicked = sessionStorage.getItem("howToUseUnlocked") === "true";
+
+function showError(msg){
+  resultImages.innerHTML = "";
+  popupMessage.classList.add('error');
+  popupMessage.textContent = msg;
+  resultPopup.style.display = 'flex';
+  setTimeout(()=>{
+    resultPopup.style.display='none';
+    popupMessage.classList.remove('error');
+  },1800);
+}
+
+function lockCheck(){
+  if(!howToUseClicked){
+    showError("Please click HOW TO USE button first!");
+    return true;
+  }
+  return false;
+}
+
+howToUseBtn.addEventListener('click', ()=>{
+  howToUseClicked = true;
+  sessionStorage.setItem("howToUseUnlocked", "true");
+  window.location.href = 'howtouse.html';
+});
+
+for(let d=0; d<=9; d++){
+  const img = document.createElement('img');
+  img.src = `assets/${d}.png`;
+  img.addEventListener('click', ()=>{
+    if(lockCheck()) return;
+    selectNumber(d, img);
+  });
+  numberGrid.appendChild(img);
+}
+
+function selectNumber(num, el){
+  if(userInput.length < 10){
+    userInput.push(num);
+    updateCircles();
+  }
+  el.classList.add('clicked');
+  setTimeout(()=>el.classList.remove('clicked'), 140);
+}
+
+backBtn.addEventListener('click', ()=>{
+  if(lockCheck()) return;
+  removeLast();
+});
+
+startBtn.addEventListener('click', ()=>{
+  if(lockCheck()) return;
+  startPrediction();
+});
+
+function removeLast(){
+  if(userInput.length===0) return;
+  userInput.pop();
+  updateCircles();
+}
+
+function updateCircles(){
+  for(let i=0;i<10;i++){
+    if(userInput[i]!==undefined){
+      inputCircles[i].innerHTML = `<img src="assets/${userInput[i]}.png">`;
+    } else {
+      inputCircles[i].textContent = labels[i];
+    }
+  }
+}
+
+function startPrediction(){
+  if(userInput.length<10){
+    showError("Please enter all 10 results before starting!");
+    return;
+  }
+
+  let nextResults = analyzeResults(userInput);
+
+  resultImages.innerHTML = "";
+  nextResults.forEach(num=>{
+    const img = document.createElement('img');
+    img.src = `assets/${num}.png`;
+    resultImages.appendChild(img);
+  });
+
+  popupMessage.textContent = "Next Results";
+  resultPopup.style.display = 'flex';
+
+  setTimeout(()=>{
+    resultPopup.style.display = 'none';
+    userInput = [];
+    updateCircles();
+  }, 3000);
+}
+
+// 🔥 ULTRA LOGIC
+function analyzeResults(nums){
+  const score = Array(10).fill(0);
+  const n = nums.length;
+  const last = nums[n-1];
+
+  for(let i=0;i<n;i++){
+    let w = 4;
+    if(i>=n-2) w=25;
+    else if(i>=n-5) w=15;
+    score[nums[i]] += w;
+  }
+
+  const freq = Array(10).fill(0);
+  nums.forEach(x=>freq[x]++);
+  for(let i=0;i<10;i++){
+    score[i] += freq[i]*3;
+  }
+
+  for(let i=0;i<n-1;i++){
+    if(nums[i] === last){
+      score[nums[i+1]] += 20;
+    }
+  }
+
+  if(n>=2){
+    let a = nums[n-2], b = nums[n-1];
+    for(let i=0;i<n-2;i++){
+      if(nums[i]===a && nums[i+1]===b){
+        score[nums[i+2]] += 15;
+      }
+    }
+  }
+
+  let streak = 1;
+  for(let i=n-1;i>0;i--){
+    if(nums[i] === nums[i-1]) streak++;
+    else break;
+  }
+  if(streak >= 2){
+    score[last] -= 20;
+  }
+
+  score[(10 - last) % 10] += 6;
+  score[last] -= 10;
+
+  let sorted = score
+    .map((s,i)=>({num:i,score:s}))
+    .sort((a,b)=>b.score-a.score);
+
+  return [sorted[0].num, sorted[1].num, sorted[2].num];
+}
+
+window.addEventListener("load", ()=>{
+  if (performance.getEntriesByType("navigation")[0]?.type === "reload") {
+    sessionStorage.removeItem("howToUseUnlocked");
+    howToUseClicked = false;
+  }
+});
+</script>
+
+</body>
+</html>
